@@ -24,9 +24,16 @@ cat > $APP/Contents/Info.plist <<'EOF'
 </plist>
 EOF
 
-swiftc -O -target x86_64-apple-macos11 \
-  -import-objc-header Bridging.h main.swift \
-  -o $APP/Contents/MacOS/SmartTouchBar
+# Binario universale: Intel + Apple Silicon
+TMP=$(mktemp -d)
+for arch in x86_64 arm64; do
+  swiftc -O -target $arch-apple-macos11 \
+    -import-objc-header Bridging.h main.swift \
+    -o $TMP/SmartTouchBar-$arch
+done
+lipo -create $TMP/SmartTouchBar-x86_64 $TMP/SmartTouchBar-arm64 \
+  -output $APP/Contents/MacOS/SmartTouchBar
+rm -rf $TMP
 
 codesign --force -s - -r="designated => identifier \"com.smarttouchbar.app\"" $APP
 echo "OK: $PWD/$APP"
